@@ -22,3 +22,8 @@ class UserCreate(User):
 
 class UserInDB(User):
     hashed_password: str
+
+
+class Encoder(BaseModel):
+    secret_key: str
+    algorithm: str
