@@ -8,8 +8,8 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 
 from ..database import read_config
 
-from .crud import create_user, read_user, is_exist_user
-from .schemas import Token, TokenData, User, UserCreate, UserInDB, Encoder
+from .crud import create_user, read_user, is_exist_user, read_user_with_id
+from .schemas import Token, TokenData, User, UserCreate, UserWithID, UserInDB, Encoder
 
 router = APIRouter()
 
@@ -52,14 +52,12 @@ def authenticate_user(username: str, password: str):
 def create_access_token(data: dict, expires_delta: Union[timedelta, None] = None):
     to_encode = data.copy()
     encoder_kw: Encoder = read_secrets()
-    print(to_encode)
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=15)
     
     to_encode.update({"exp": expire})
-    print(to_encode)
     encoded_jwt = jwt.encode(to_encode, encoder_kw.secret_key, algorithm=encoder_kw.algorithm)
     return encoded_jwt
 
@@ -92,11 +90,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 async def get_access_token(user: User):
     access_token_expires = timedelta(minutes=read_config("access_token_expire_minutes"))
     access_token = create_access_token(data={"sub": user.username}, expires_delta=access_token_expires)
-    print(access_token)
     return Token(access_token=access_token, token_type="bearer")
 
 
-@router.post("/token/", response_model=Token)
+@router.post("/token/", response_model=Token, tags=["user"])
 async def read_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     
@@ -111,12 +108,14 @@ async def read_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
     return token
 
 
-@router.get("/users/me/", response_model=User)
+@router.get("/users/me/", response_model=UserWithID, tags=["user"])
 def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    user_data = read_user_with_id(current_user.username)
+    user_data["id"] = str(user_data["_id"])
+    return user_data
 
 
-@router.post("/users/", response_model=Token)
+@router.post("/users/", response_model=Token, tags=["user"])
 async def create_new_user(raw_user: UserCreate = Body()):
     is_exist = is_exist_user(raw_user.username)
     if is_exist:

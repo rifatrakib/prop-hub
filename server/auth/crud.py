@@ -32,3 +32,14 @@ def is_exist_user(username):
         is_exist = True if user_data else False
     
     return is_exist
+
+
+def read_user_with_id(username):
+    query = {"username": username}
+    user_data = None
+    with MongoConnectionManager(auth_collection_name) as conn:
+        user_data = list(conn.find(query).limit(1))
+        if user_data:
+            user_data = user_data[0]
+    
+    return user_data

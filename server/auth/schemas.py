@@ -20,6 +20,10 @@ class UserCreate(User):
     password: str
 
 
+class UserWithID(User):
+    id: str
+
+
 class UserInDB(User):
     hashed_password: str
 
